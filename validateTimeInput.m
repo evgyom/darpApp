@@ -13,8 +13,12 @@ function warn = validateTimeInput(value)
         if(size(split_value,1) ~= 2)
             warn = true;
         else
-            %Check if the strings are not too long
-            if((size(split_value{1},2) ~= 2) || (size(split_value{2},2) ~= 2))
+            %Check if the hour string is longer
+            if((size(split_value{1},2) > 2))
+                warn = true;
+            end    
+            %Check if the minute string is not 2 characters long
+            if((size(split_value{2},2) ~= 2))
                 warn = true;
             end
 

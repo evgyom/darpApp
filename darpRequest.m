@@ -2,10 +2,10 @@ classdef darpRequest
     
    properties
        requestId;
-       pickupNodeId;
+       pickUpNodeId;
        dropOffNodeId;
        pickUpTimeEarliest;
-       dropoffTimeLates;
+       dropOffTimeLatest;
    end
    
    methods
