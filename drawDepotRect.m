@@ -16,7 +16,7 @@ function retImg = drawDepotRect(imgIn, xMin, yLeft, height, width, fillColor)
     end
            
     retImg = imgIn;
-    for x = xLeft : xLeft + height
+    for x = xMin : xMin + height
         for y = yLeft : yLeft + width
             %Fill
             if(x>=xMin || x <= xMax || y >= yLeft || y<=yRight) 

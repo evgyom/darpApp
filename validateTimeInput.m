@@ -2,6 +2,8 @@ function warn = validateTimeInput(value)
     % validateTimeInput validates text input from text edit fields
     % params:
     %   - value: text input value
+    % returns:
+    %   - warn: 1 if the input string is invalid, 0 else
     
     warn = false;
     %Check if the text contains a ":" separator
@@ -20,19 +22,19 @@ function warn = validateTimeInput(value)
             %Check if the minute string is not 2 characters long
             if((size(split_value{2},2) ~= 2))
                 warn = true;
-            end
+            else
+                hour = str2num(split_value{1});
+                min = str2num(split_value{2});
 
-            hour = str2num(split_value{1});
-            min = str2num(split_value{2});
-
-            %Check if the values are numbers
-            if(isempty(hour) || isempty(min))
-                warn = true; 
+                %Check if the values are numbers
+                if(isempty(hour) || isempty(min))
+                    warn = true; 
+                end
+                %Check if numbers are in range
+                if(hour<0 || hour>23 || min<0 || hour>59)
+                    warn = true;                       
+                end    
             end
-            %Check if numbers are in range
-            if(hour<0 || hour>23 || min<0 || hour>59)
-                warn = true;                       
-            end    
         end
     end
 end
