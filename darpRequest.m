@@ -6,9 +6,14 @@ classdef darpRequest
        dropOffNodeId;
        pickUpTimeEarliest;
        dropOffTimeLatest;
+       served;
    end
    
    methods
+       
+       function obj = darpRequest()
+           obj.served = false;
+       end
        
    end
    

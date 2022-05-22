@@ -21,7 +21,58 @@ classdef darpSquareGridGraph
             
             obj = obj.generateAdjMat();
             obj = obj.calculateCoordinates();
-        end             
+        end
+        
+        function distance = getDistance(obj, node1, node2)
+            node1row = obj.nodeCoords(node1,1);
+            node1col = obj.nodeCoords(node1,2);
+            node2row = obj.nodeCoords(node2,1);
+            node2col = obj.nodeCoords(node2,2);
+            distance = abs(node1row - node2row) + abs(node1col - node2col); 
+        end
+        
+        function route = getRoute(obj, node1, node2)
+            node1row = obj.nodeCoords(node1,1);
+            node1col = obj.nodeCoords(node1,2);
+            node2row = obj.nodeCoords(node2,1);
+            node2col = obj.nodeCoords(node2,2);
+            
+            allCoords = zeros(obj.getDistance(node1, node2) + 1,2);
+            j = 0;
+            % Go to the same column
+            if(node1col<=node2col)
+                cols = node1col:node2col;
+            else
+                cols = node1col:-1:node2col;
+            end
+            
+            for i = cols
+                j=j+1;
+                allCoords(j,1) = node1row;
+                allCoords(j,2) = i;
+            end
+            
+            % Go to thesame row
+            j = j-1;
+            if(node1row<=node2row)
+                rows = node1row:node2row;
+            else
+                rows = node1row:-1:node2row;
+            end
+            
+            for i = rows
+                j=j+1;
+                allCoords(j,1) = i;
+                allCoords(j,2) = node2col;
+            end
+            
+            route = zeros(j,1);
+            for i = 1:j
+                plom = ismember(obj.nodeCoords(:,1), allCoords(i,1)) + ismember(obj.nodeCoords(:,2), allCoords(i,2));
+                found = find(plom == 2);
+                route(i) = found;
+            end
+        end
     end
     
     methods (Access = private)
