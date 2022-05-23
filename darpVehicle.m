@@ -17,7 +17,8 @@ classdef darpVehicle
        completeRoute;
        nodeServedTime;
        passengersOnBoardAfterNode;
-       requestsServed;
+       requestsCompleted;
+       
    end
    
     methods
@@ -30,7 +31,8 @@ classdef darpVehicle
             
             obj.completeRoute = [obj.depotNodeId];
             obj.nodeServedTime = [0];
-            obj.passengersOnBoardAfterNode = [0];
+            obj.passengersOnBoardAfterNode = {0};
+            obj.requestsCompleted = [];
 
             obj.progress = 0;
         end

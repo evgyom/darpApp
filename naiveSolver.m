@@ -9,6 +9,7 @@ classdef naiveSolver
         startTime;
         maxTime;
         time;
+        duration;
     end
     
     methods
@@ -21,7 +22,8 @@ classdef naiveSolver
             obj.unservedRequests = [];
             
             obj.startTime = 0;
-            obj.maxTime = 0; 
+            obj.maxTime = 0;
+            obj.duration = 0;
         end
         
         function obj = solve(obj)
@@ -34,21 +36,43 @@ classdef naiveSolver
             % Iterate over all the time steps
             while(obj.time<=obj.maxTime)
                 disp(obj.time)
-                [numRequests, activeRequests] = obj.getActiveRequests();
+                [numRequests, activeRequests, ~] = obj.getActiveRequests();               
                 for i = 1:numRequests
                     [obj,activeRequests{i}]  = obj.scheduleRequest(activeRequests{i});
+                    %Update requests
+                    obj = obj.updateServedRequest(activeRequests{i});
                 end
                 obj = obj.allVehiclesStep();
+                
+                [~, ~, servedRequests] = obj.getActiveRequests();
+                numPassengersInVehicles = obj.getNumOfPassengersOnBoard();
+                if(size(servedRequests,1) == size(obj.possibleRequests,1) && numPassengersInVehicles == 0)
+                    obj.duration = obj.time - obj.startTime;
+                    break;
+                end
+                
                 obj.time = obj.time+1;
             end
         end
         
         function routes = getRoutes(obj)
-            routes = cell(size(obj.vehicles,1),3);
+            routes = cell(size(obj.vehicles,1),5);
             for i = 1:size(obj.vehicles,1)
-                routes{i,1} = obj.vehicles(i).completeRoute;
-                routes{i,1} = obj.vehicles(i).nodeServedTime;
-                routes{i,1} = obj.vehicles(i).requestsServed;
+                routes{i,1} = obj.vehicles(i).vehicleId;
+                routes{i,2} = obj.vehicles(i).completeRoute;
+                routes{i,3} = obj.vehicles(i).nodeServedTime;
+                routes{i,4} = obj.vehicles(i).passengersOnBoardAfterNode;
+                routes{i,5} = obj.vehicles(i).assignedRequests;
+            end
+        end
+        
+        function unservedRequests = getUnservedRequests(obj)
+            %Return the unserved requests
+            unservedRequests = {};
+            for i = 1:size(obj.possibleRequests,1)
+                if(~obj.possibleRequests{i}.served)
+                    unservedRequests{end+1,1} = obj.possibleRequests{i};
+                end
             end
         end
     end
@@ -96,9 +120,10 @@ classdef naiveSolver
             end
         end
         
-        function [numRequests, activeRequests] = getActiveRequests(obj)
+        function [numRequests, activeRequests, servedRequests] = getActiveRequests(obj)
             %Return the active requests
-            activeRequests = cell(1);
+            activeRequests = {};
+            servedRequests = {};
             numRequests = 0;
             for i = 1:size(obj.possibleRequests,1)
                 if(obj.possibleRequests{i}.pickUpTimeEarliest <= obj.time && ...
@@ -107,12 +132,23 @@ classdef naiveSolver
                     numRequests = numRequests + 1;
                     activeRequests{end+1,1} = obj.possibleRequests(i);
                 end
+                
+                if(obj.possibleRequests{i}.served)
+                    servedRequests{end+1,1} = obj.possibleRequests{i};
+                end
             end
-            % Delete the first row. Matlab magic.
-            activeRequests(1,:) = [];
         end
         
-        function [obj, requestOut] = scheduleRequest(obj, requestIn)
+        function obj = updateServedRequest(obj, requestIn)
+            for i = 1:size(obj.possibleRequests,1)
+                if(obj.possibleRequests{i}.requestId == requestIn.requestId)
+                   obj.possibleRequests{i} = requestIn;
+                   break;
+                end
+            end
+        end
+        
+        function [obj, requestOut] = scheduleRequest(obj, requestIn)  
             requestIn = requestIn{1};
             minAddTime = -1;
             minMode = -1;
@@ -163,7 +199,7 @@ classdef naiveSolver
                     else
                         nextNodes = obj.graph.getRoute(bestVehicle.nextNodes(end), requestIn.pickUpNodeId);
                     end
-                    for i = 2:size(nextNodes,1)-1
+                    for i = 2:size(nextNodes,1)
                         bestVehicle.nextNodes(end+1) = nextNodes(i); 
                     end
                     %Append nodes from the pickup to the dropoff of the
@@ -227,7 +263,7 @@ classdef naiveSolver
                 %No need to check capacity
                 %Check if after the lost dropoff the vehicles can still
                 %serve the request within the timewindow
-                if(size(vehicle.nextNodes,1) == 0)
+                if(size(vehicle.nextNodes,2) == 0)
                     pTimeAdd = obj.graph.getDistance(vehicle.depotNodeId, requestIn.pickUpNodeId) * obj.edgeTime - vehicle.progress;
                 else
                     pTimeAdd = obj.graph.getDistance(vehicle.nextNodes(end), requestIn.pickUpNodeId) * obj.edgeTime - vehicle.progress;
@@ -243,70 +279,105 @@ classdef naiveSolver
         function obj = allVehiclesStep(obj)
             for i = 1:size(obj.vehicles,1)
                 vehic = obj.vehicles(i);
+                
+                if(vehic.vehicleId == 3 && obj.time > 475)
+                    disp(0)
+                end
+                
                 % Check if vehicles is currently on a pickup location
                 % (depot)
-                if(any(ismember(vehic.pickUps, vehic.pos)))
+                if(any(ismember(vehic.pickUps, vehic.pos)) && vehic.progress == 0)
                     % Remove node from pickups
-                    vehic.pickUps = vehic.pickUps(vehic.pickups ~= vehic.pos);
+                    vehic.pickUps = vehic.pickUps(vehic.pickUps ~= vehic.pos);
                     % Add request to onBoardRequests
-                    for j = 1:size(vehicle.assignedRequests)
-                       req = vehicle.assignedRequests(j);
+                    for j = 1:size(vehic.assignedRequests)
+                       req = vehic.assignedRequests{j};
                        if(req.pickUpNodeId == vehic.pos && ...
                                req.pickUpTimeEarliest <= obj.time && ...
-                               req.dropOffTimeLatest >= obj.time)
-                           vehic.onBoardRequests(end+1) = req;
+                               req.dropOffTimeLatest >= obj.time && ...
+                               reg.served == false)
+                           vehic.onBoardRequests{end+1} = req;
                        end
                     end
                     % Add onBoardRequests to passengersOnBoardAfterNode array
-                    vehic.passengersOnBoardAfterNode(1) = vehic.onBoardRequests();
+                    vehic.passengersOnBoardAfterNode{1} = vehic.onBoardRequests;
                 end
                 % Step
-                vehic.progress = vehic.progress + 1;
+                if(size(vehic.nextNodes,1) ~= 0)
+                    vehic.progress = vehic.progress + 1;
+                end
                 % Check if node is reached                
                 if(vehic.progress == obj.edgeTime)
-                    vehic.pos = vehic.nextNodes(1);
-                    vehic.nextNodes(1) = [];
-                    vehic.progress = 0;
+                    % Check if this is the last node
+                    if(size(vehic.nextNodes,2) == 0)
+                        vehic.progress = 0;
+                    else
+                        vehic.pos = vehic.nextNodes(1);
+                        vehic.nextNodes(1) = [];
+                        vehic.progress = 0;
+                    end                    
                                         
                     % Check if pickup or dropoff is possible
                     if(any(ismember(vehic.pickUps, vehic.pos)))
                         % Remove node from pickups
                         vehic.pickUps = vehic.pickUps(vehic.pickUps ~= vehic.pos);
                         % Add request to onBoardRequests
-                        for j = 1:size(vehic.assignedRequests)
+                        for j = 1:size(vehic.assignedRequests,2)
                            req = vehic.assignedRequests{j};
-                           if(req.pickUpNodeId == vehic.pos && ...
-                                   req.pickUpTimeEarliest <= obj.time && ...
-                                   req.dropOffTimeLatest >= obj.time)
-                               vehic.onBoardRequests(end+1) = req;
+                           if(~isnumeric(req))
+                                if(req.pickUpNodeId == vehic.pos && ...
+                                     req.pickUpTimeEarliest <= obj.time && ...
+                                     req.dropOffTimeLatest >= obj.time && ...
+                                     ~any(ismember(vehic.requestsCompleted, req.requestId)))
+                                    vehic.onBoardRequests{end+1} = req;
+                                end
                            end
+                           
+                           
                         end
                     elseif(any(ismember(vehic.dropOffs, vehic.pos)))
                         % Remove node from dropOffs
-                        vehic.dropOffs = vehic.pickUps(vehic.dropOffs ~= vehic.pos);
+                        vehic.dropOffs = vehic.dropOffs(vehic.dropOffs ~= vehic.pos);
                         % Remove request from onBoardRequests
-                        for j = 1:size(vehic.assignedRequests)
-                           if(vehic.assignedRequests(j).dropOffNodeId == vehic.pos && ...
-                              vehic.assignedRequests(j).pickUpTimeEarliest <= obj.time && ...
-                              vehic.assignedRequests(j).dropOffTimeLatest >= obj.time)
-                               vehic.assignedRequests(j) = [];
+                        for j = 1:size(vehic.onBoardRequests,2)
+                           req = vehic.onBoardRequests{j};
+                           if(~isnumeric(req))
+                               if(req.dropOffNodeId == vehic.pos && ...
+                                  req.pickUpTimeEarliest <= obj.time && ...
+                                  req.dropOffTimeLatest >= obj.time)
+                                   vehic.onBoardRequests{j} = [];
+                                   vehic.requestsCompleted(end+1) = req.requestId;
+                               end
                            end
                         end
                     end
                     
-                    % Append node to whole route
-                    vehic.completeRoute(end+1) = vehic.pos;
-                    % Append current time to the nodes served array
-                    vehic.nodeServedTime(end+1) = obj.time;
-                    % Add onBoardRequests to passengersOnBoardAfterNode array
-                    if(size(vehic.onBoardRequests,1) == 0)
-                        vehic.passengersOnBoardAfterNode{end+1} = 0;
-                    else
-                        vehic.passengersOnBoardAfterNode{end+1} = vehic.onBoardRequests;
-                    end                   
+                    % Save results if vehicle is moving
+                    if(size(vehic.nextNodes,2) ~= 0 || (size(vehic.nextNodes,2) == 0 && vehic.completeRoute(end) ~= vehic.pos))
+                        % Append node to whole route
+                        vehic.completeRoute(end+1) = vehic.pos;
+                        % Append current time to the nodes served array
+                        vehic.nodeServedTime(end+1) = obj.time;
+                        % Add onBoardRequests to passengersOnBoardAfterNode array
+                        if(size(vehic.onBoardRequests,1) == 0)
+                            vehic.passengersOnBoardAfterNode{end+1} = 0;
+                        else
+                            vehic.passengersOnBoardAfterNode{end+1} = vehic.onBoardRequests;
+                        end  
+                    end
+                                     
                 end
                 obj.vehicles(i) = vehic;
             end
         end
+        
+        function num = getNumOfPassengersOnBoard(obj)
+            num = 0;
+            for i = 1:size(obj.vehicles,1)
+                vehic = obj.vehicles(i);
+                num = num + size(vehic.dropOffs,2);
+            end
+        end
+        
     end
 end
