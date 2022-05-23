@@ -1,3 +1,4 @@
 *.html
 test.m
 /simulation_data
+/solution_data

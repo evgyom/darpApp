@@ -278,12 +278,7 @@ classdef naiveSolver
         
         function obj = allVehiclesStep(obj)
             for i = 1:size(obj.vehicles,1)
-                vehic = obj.vehicles(i);
-                
-                if(vehic.vehicleId == 3 && obj.time > 475)
-                    disp(0)
-                end
-                
+                vehic = obj.vehicles(i);                
                 % Check if vehicles is currently on a pickup location
                 % (depot)
                 if(any(ismember(vehic.pickUps, vehic.pos)) && vehic.progress == 0)
