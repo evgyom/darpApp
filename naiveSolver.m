@@ -352,7 +352,7 @@ classdef naiveSolver
                         % Append node to whole route
                         vehic.completeRoute(end+1) = vehic.pos;
                         % Append current time to the nodes served array
-                        vehic.nodeServedTime(end+1) = obj.time;
+                        vehic.nodeServedTime(end+1) = obj.time+1;
                         % Add onBoardRequests to passengersOnBoardAfterNode array
                         if(size(vehic.onBoardRequests,1) == 0)
                             vehic.passengersOnBoardAfterNode{end+1} = 0;

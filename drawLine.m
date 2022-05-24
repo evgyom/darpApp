@@ -41,7 +41,7 @@ function retImg = drawLine(imgIn, x1, y1, x2, y2, color, lineWidth)
         end
     else
         %The line is vertical
-        for x = min(x1:x2):max(x1:x2)
+        for x = min(x1,x2):max(x1,x2)
             if(widthEven)
                 for y_width = (y1-lineWidth/2) : (y1+lineWidth/2-1)
                     retImg(y_width,x,:) = color;
